@@ -1,0 +1,38 @@
+# Maelstrom test outputs
+maelstrom/store/
+maelstrom/*.log
+
+# Go binaries
+maelstrom-echo
+maelstrom-unique-ids
+**/maelstrom-*
+
+# Build artifacts
+**/tmp/
+*.test
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+*.out
+coverage.html
+
+# Environment files
+.env
+.env.local
+
