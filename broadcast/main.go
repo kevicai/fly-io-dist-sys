@@ -1,90 +1,43 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
-type NodeState struct {
-	nodeID      string
-	neighbors   []string
-	messages    []int
-}
-
 func main() {
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
 	n := maelstrom.NewNode()
-	state := &NodeState{}
+	state := NewNodeState()
 
-	// Handle init message to extract node ID
-	n.Handle("init", func(msg maelstrom.Message) error {
-		var body struct {
-			NodeID string `json:"node_id"`
-		}
-		if err := json.Unmarshal(msg.Body, &body); err != nil {
-			return err
-		}
+	// Create broadcast function
+	broadcast := createBroadcastFunc(n, state)
 
-		state.nodeID = body.NodeID
+	// Start periodic gossip loop for retry logic
+	startGossipLoop(ctx, state, broadcast)
 
-		return n.Reply(msg, map[string]any{
-			"type": "init_ok",
-		})
-	})
+	// Register message handlers
+	n.Handle("topology", handleTopology(n, state))
+	n.Handle("broadcast", handleBroadcast(n, state, broadcast))
+	n.Handle("read", handleRead(n, state))
 
-	// Handle topology message to extract neighbors
-	n.Handle("topology", func(msg maelstrom.Message) error {
-		var body struct {
-			Topology map[string][]string `json:"topology"`
-		}
-		if err := json.Unmarshal(msg.Body, &body); err != nil {
-			return err
-		}
-
-		if neighbors, ok := body.Topology[state.nodeID]; !ok {
-			return fmt.Errorf("Node ID not found in topology")
-		} else {
-			state.neighbors = neighbors
-		}
-
-		return n.Reply(msg, map[string]any{
-			"type": "topology_ok",
-		})
-	})
-
-	n.Handle("broadcast", func(msg maelstrom.Message) error {
-		var body struct {
-			Message int `json:"message"`
-		}
-		if err := json.Unmarshal(msg.Body, &body); err != nil {
-			return err
-		}
-
-		state.messages = append(state.messages, body.Message)
-
-		for _, neighbor := range state.neighbors {
-			n.Send(neighbor, map[string]any{
-				"type":    "broadcast",
-				"message": body.Message,
-			})
-		}
-
-		return n.Reply(msg, map[string]any{
-			"type": "broadcast_ok",
-		})
-	})
-
-	n.Handle("read", func(msg maelstrom.Message) error {
-		return n.Reply(msg, map[string]any{
-			"type": "read_ok",
-			"messages": state.messages,
-		})
-	})
-
+	// Run the node
 	if err := n.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
-
