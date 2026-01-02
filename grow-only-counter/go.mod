@@ -1,4 +1,4 @@
-module maelstrom-echo
+module maelstrom-counter
 
 go 1.25.5
 
