@@ -30,13 +30,8 @@ go install .
 
 ### Broadcast
 
-
-Features:
-- **Deduplication**: Messages are stored in a set to prevent duplicates
-- **Gossip protocol**: Periodic retry mechanism for network fault tolerance
-- **Acknowledgment tracking**: Tracks which neighbors have received each message
-- **Thread-safe**: All state operations are protected with mutexes
-- **Graceful shutdown**: Context-based cancellation for clean termination
+A fault-tolerant broadcast system that propagates messages to all nodes in a cluster.
+- Immediate send with periodic gossip mechanism retries unacknowledged messages for network fault tolerance
 
 Build and test:
 ```bash
@@ -51,3 +46,16 @@ Results:
 - **99th percentile**: 785ms
 - **Max latency**: 853ms
 
+### Grow-Only Counter
+
+A distributed counter implementation using a partitioned approach where each node maintains its own counter value.
+- Each node maintains its own counter in the KV store
+- Add operations use CAS with retry loop for local consistency
+- Read operations sum all node counters in parallel using goroutines
+
+Build and test:
+```bash
+cd grow-only-counter
+go install .
+./maelstrom/maelstrom test -w g-counter --bin ~/go/bin/maelstrom-grow-only-counter --node-count 3 --rate 100 --time-limit 20 --nemesis partition
+```
