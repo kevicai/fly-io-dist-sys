@@ -59,3 +59,15 @@ cd grow-only-counter
 go install .
 ./maelstrom/maelstrom test -w g-counter --bin ~/go/bin/maelstrom-grow-only-counter --node-count 3 --rate 100 --time-limit 20 --nemesis partition
 ```
+
+### Kafka-Style Log
+
+A distributed append-only log similar to Apache Kafka, providing linearizable message ordering per partition.
+- Ticket-based ordering system using Linearizable KV store for log offset allocation
+
+Build and test:
+```bash
+cd kafka-log
+go install .
+./maelstrom/maelstrom test -w kafka --bin ~/go/bin/maelstrom-kafka --node-count 2 --concurrency 2n --time-limit 20 --rate 1000
+```
