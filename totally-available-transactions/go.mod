@@ -1,4 +1,4 @@
-module maelstrom-kafka
+module maelstrom-txn
 
 go 1.25.5
 
